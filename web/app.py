@@ -15,6 +15,8 @@ client = MongoClient("mongodb://db:27017")
 db = client["PlagiarismDB"]
 users = db["Users"]
 
+admins = ["elvis", "peter", "bob", "joe", "john"] # testing purposes
+
 
 # Resources
 class Register(Resource):
@@ -87,6 +89,31 @@ class Detect(Resource):
              }})
         return jsonify(return_json)
          
+
+class Refill(Resource):
+    def post(self):
+        posted_data = request.get_json()
+
+        username = posted_data["username"]
+        password = posted_data["password"]
+        refill_amount = posted_data["refill_token"]
+
+        if not user_exists(username):
+            return jsonify({"message": "Invalid username"})
+        
+        if username in admins:
+            verify_password(password)
+            current_tokens = token_balance(username)
+            users.update_one({"Username": username}, {"$set": {"Tokens": current_tokens+refill_amount}})
+            return jsonify({"message": "Token refilled successfully"})
+        else:
+            return jsonify({"message": "You do not have permission to refill token"})
+
+# url mapping
+api.add_resource(Register, '/register')
+api.add_resource(Detect, '/detect')
+api.add_resource(Refill, '/refill')
+
 
 # Run to docker set port
 app.run(debug=True, host='0.0.0.0', port="3000")
