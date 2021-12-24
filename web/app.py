@@ -2,8 +2,6 @@ from flask import Flask, jsonify, request
 from flask_restful import Api, Resource
 from pymongo import MongoClient
 import bcrypt, spacy
-from validators import user_exists, verify_password, token_balance
-
 
 # Flask
 app = Flask(__name__)
@@ -16,6 +14,27 @@ db = client["PlagiarismDB"]
 users = db["Users"]
 
 admins = ["elvis", "peter", "bob", "joe", "john"] # testing purposes
+
+# Functions
+
+def user_exists(username):
+    if users.find_one({"Username": username}).count() == 0:
+        return False
+    else:
+        return True
+
+
+def token_balance(username):
+    return users.find_one({"Username": username})[0]["Tokens"]
+
+
+def verify_password(username, password):
+    hashed_pw = users.find({"Username": username})[0]["Password"]
+
+    if bcrypt.checkpw(password.encode("utf-8"), hashed_pw):
+        return True
+    else:
+        return False
 
 
 # Resources
@@ -53,8 +72,8 @@ class Detect(Resource):
         tokens = posted_data["tokens"]
 
         # Documents to check against
-        text1 = posted_data["text1"]
-        text2 = posted_data["text2"]
+        doc1 = posted_data["doc1"]
+        doc2 = posted_data["doc2"]
 
 
         correct_pw = verify_password(username, password)
@@ -73,11 +92,11 @@ class Detect(Resource):
         # Calculate
         nlp = spacy.load("en_core_web_sm")
 
-        text1 = nlp(text1)
-        text2 = nlp(text2)
+        doc1 = nlp(doc1)
+        doc2 = nlp(doc2)
 
         # int (0-1) closer to 1 indicates similarity
-        ratio = text1.similarity(text2)
+        ratio = doc1.similarity(doc2)
 
         return_json = {"message": "Success", "similarity": ratio}
         current_tokens = token_balance(username)
