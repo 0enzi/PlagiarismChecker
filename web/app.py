@@ -18,14 +18,14 @@ admins = ["elvis", "peter", "bob", "joe", "john"] # testing purposes
 # Functions
 
 def user_exists(username):
-    if users.find_one({"Username": username}).count() == 0:
+    if users.count_documents({"Username": username}) == 0:
         return False
     else:
         return True
 
 
 def token_balance(username):
-    return users.find_one({"Username": username})[0]["Tokens"]
+    return users.find({"Username": username})[0]["Tokens"]
 
 
 def verify_password(username, password):
@@ -48,19 +48,22 @@ class Register(Resource):
             return jsonify({
                 "message": "User already registered"
             })
-        hashed_pw = bcrypt.hashed_pw(password.encode("utf-8"), bcrypt.gensalt())
+        hashed_pw = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
 
 
         new_user = {
             "Username": username,
-            "Password": hashed_pw,
             "Tokens": 8
         }
+
         users.insert_one({
-            "Message": "User registered successfully",
-            "User": new_user,
+            "Username": username,
+            "Password": hashed_pw,
+            "Tokens": 8,
 
         })
+
+        return jsonify(new_user)
 
 
 class Detect(Resource):
@@ -69,7 +72,7 @@ class Detect(Resource):
 
         username = posted_data["username"]
         password = posted_data["password"]
-        tokens = posted_data["tokens"]
+        # tokens = posted_data["tokens"]
 
         # Documents to check against
         doc1 = posted_data["doc1"]
